@@ -42,11 +42,7 @@ class TokenKind(Enum):
 @dataclass
 class Token:
     kind: TokenKind
-    literal: str | None = None
-
-    def __post_init__(self) -> None:
-        if self.literal is None:
-            self.literal = self.kind.value
+    literal: str
 
 
 def lookup_ident(ident: str) -> TokenKind:

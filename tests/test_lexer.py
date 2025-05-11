@@ -1,5 +1,3 @@
-import pytest
-
 from monk.lexer import Lexer
 from monk.token import Token, TokenKind
 
@@ -116,13 +114,12 @@ def test_next_token() -> None:
         Token(TokenKind.NOT_EQ, "!="),
         Token(TokenKind.INT, "9"),
         Token(TokenKind.SEMICOLON, ";"),
+        ##
+        Token(TokenKind.EOF, ""),
     ]
 
     lexer = Lexer(code)
 
-    for expected_token in expected_tokens:
+    for i, expected_token in enumerate(expected_tokens):
         actual_token = next(lexer)
-        assert expected_token == actual_token
-
-    with pytest.raises(StopIteration):
-        next(lexer)
+        assert expected_token == actual_token, f"Token #{i + 1} mismatch"

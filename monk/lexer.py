@@ -16,7 +16,7 @@ _SINGLE_CHAR_TOKEN_KIND_MAP = {
     ",": TokenKind.COMMA,
     "<": TokenKind.LT,
     ">": TokenKind.GT,
-    "!": TokenKind.BANG,  # Added missing BANG token
+    "!": TokenKind.BANG,
 }
 
 
@@ -26,25 +26,29 @@ class Lexer:
         self._pos = -1
         self._current_char = ""
         self._next_char = ""
+        self._advance()
 
     def __iter__(self) -> Lexer:
         return self
 
     def __next__(self) -> Token:
-        self._advance()
         self._eat_whitespace()
+
+        token = Token(TokenKind.ILLEGAL, "")
 
         match self._current_char:
             case "=" if self._next_char == "=":
                 self._advance()
-                return Token(TokenKind.EQ, "==")
-
-            case "!" if self._next_char == "=":  # Added NOT_EQ token
                 self._advance()
-                return Token(TokenKind.NOT_EQ, "!=")
+                token = Token(TokenKind.EQ, "==")
+
+            case "!" if self._next_char == "=":
+                self._advance()
+                self._advance()
+                token = Token(TokenKind.NOT_EQ, "!=")
 
             case _ if self._current_char in _SINGLE_CHAR_TOKEN_KIND_MAP:
-                return Token(
+                token = Token(
                     kind=_SINGLE_CHAR_TOKEN_KIND_MAP[self._current_char],
                     literal=self._current_char,
                 )
@@ -52,16 +56,19 @@ class Lexer:
             case _ if self._current_char.isalpha():
                 literal = self._eat_ident()
                 kind = lookup_ident(literal)
-                return Token(kind, literal)
+                token = Token(kind, literal)
 
             case _ if self._current_char.isdigit():
-                return Token(TokenKind.INT, self._eat_int())
+                token = Token(TokenKind.INT, self._eat_int())
 
-            case "":  # End of input
-                raise StopIteration
+            case "":
+                return Token(TokenKind.EOF, "")
 
             case _:
-                return Token(TokenKind.ILLEGAL, self._current_char)
+                token = Token(TokenKind.ILLEGAL, self._current_char)
+
+        self._advance()
+        return token
 
     def _eat_whitespace(self) -> None:
         while self._current_char.isspace():
