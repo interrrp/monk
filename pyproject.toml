@@ -11,5 +11,6 @@ line-length = 100
 lint.select = ["ALL"]
 lint.ignore = ["D"]
 lint.per-file-ignores = { "tests/**/*.py" = [
-    "S101", # Allow asserts in tests
+    "S101",   # Allow asserts in tests
+    "FBT001", # Allow boolean-typed positionals in tests
 ] }

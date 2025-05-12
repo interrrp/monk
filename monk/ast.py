@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import override
 
 from monk.token import Token
+from monk.utils import join_commas
 
 
 class Node(ABC):
@@ -11,30 +11,31 @@ class Node(ABC):
     def token_literal(self) -> str: ...
 
     @abstractmethod
+    @override
     def __str__(self) -> str: ...
 
 
-class Stmt(Node): ...
+class Statement(Node, ABC): ...
 
 
-class Expr(Node): ...
+class Expression(Node, ABC): ...
 
 
 @dataclass(frozen=True)
 class Program(Node):
-    stmts: list[Stmt]
+    statements: list[Statement]
 
     @override
     def token_literal(self) -> str:
-        return self.stmts[0].token_literal()
+        return self.statements[0].token_literal()
 
     @override
     def __str__(self) -> str:
-        return "\n".join(str(s) for s in self.stmts)
+        return "\n".join(str(s) for s in self.statements)
 
 
 @dataclass(frozen=True)
-class Ident(Expr):
+class Identifier(Expression):
     token: Token
     value: str
 
@@ -48,10 +49,10 @@ class Ident(Expr):
 
 
 @dataclass(frozen=True)
-class LetStmt(Stmt):
+class LetStatement(Statement):
     token: Token
-    name: Ident
-    value: Expr
+    name: Identifier
+    value: Expression
 
     @override
     def token_literal(self) -> str:
@@ -63,9 +64,9 @@ class LetStmt(Stmt):
 
 
 @dataclass(frozen=True)
-class ReturnStmt(Stmt):
+class ReturnStatement(Statement):
     token: Token
-    value: Expr
+    value: Expression
 
     @override
     def token_literal(self) -> str:
@@ -77,9 +78,9 @@ class ReturnStmt(Stmt):
 
 
 @dataclass(frozen=True)
-class ExprStmt(Stmt):
+class ExpressionStatement(Statement):
     token: Token
-    expr: Expr
+    expression: Expression
 
     @override
     def token_literal(self) -> str:
@@ -87,11 +88,11 @@ class ExprStmt(Stmt):
 
     @override
     def __str__(self) -> str:
-        return str(self.expr) + ";"
+        return str(self.expression) + ";"
 
 
 @dataclass(frozen=True)
-class IntLiteral(Expr):
+class IntegerLiteral(Expression):
     token: Token
     value: int
 
@@ -105,10 +106,10 @@ class IntLiteral(Expr):
 
 
 @dataclass(frozen=True)
-class PrefixExpr(Expr):
+class PrefixExpression(Expression):
     token: Token
     operator: str
-    right: Expr
+    right: Expression
 
     @override
     def token_literal(self) -> str:
@@ -120,11 +121,11 @@ class PrefixExpr(Expr):
 
 
 @dataclass(frozen=True)
-class InfixExpr(Expr):
+class InfixExpression(Expression):
     token: Token
-    left: Expr
+    left: Expression
     operator: str
-    right: Expr
+    right: Expression
 
     @override
     def token_literal(self) -> str:
@@ -136,7 +137,7 @@ class InfixExpr(Expr):
 
 
 @dataclass(frozen=True)
-class Bool(Expr):
+class BooleanLiteral(Expression):
     token: Token
     value: bool
 
@@ -150,9 +151,9 @@ class Bool(Expr):
 
 
 @dataclass(frozen=True)
-class BlockStmt(Stmt):
+class BlockStatement(Statement):
     token: Token
-    stmts: list[Stmt]
+    statements: list[Statement]
 
     @override
     def token_literal(self) -> str:
@@ -160,15 +161,15 @@ class BlockStmt(Stmt):
 
     @override
     def __str__(self) -> str:
-        return f"{{\n    {'\n    '.join(str(s) for s in self.stmts)}\n}}"
+        return f"{{\n    {'\n    '.join(str(s) for s in self.statements)}\n}}"
 
 
 @dataclass(frozen=True)
-class IfExpr(Expr):
+class IfExpression(Expression):
     token: Token
-    condition: Expr
-    consequence: BlockStmt
-    alternative: BlockStmt | None
+    condition: Expression
+    consequence: BlockStatement
+    alternative: BlockStatement | None
 
     @override
     def token_literal(self) -> str:
@@ -185,10 +186,10 @@ class IfExpr(Expr):
 
 
 @dataclass(frozen=True)
-class FnLiteral(Expr):
+class FunctionLiteral(Expression):
     token: Token
-    params: list[Ident]
-    body: BlockStmt
+    parameters: list[Identifier]
+    body: BlockStatement
 
     @override
     def token_literal(self) -> str:
@@ -196,14 +197,14 @@ class FnLiteral(Expr):
 
     @override
     def __str__(self) -> str:
-        return f"{self.token_literal}({_join_commas(self.params)}) {self.body}"
+        return f"{self.token_literal}({join_commas(self.parameters)}) {self.body}"
 
 
 @dataclass(frozen=True)
-class CallExpr(Expr):
+class CallExpression(Expression):
     token: Token
-    fn: Ident | FnLiteral
-    args: list[Expr]
+    function: Identifier | FunctionLiteral
+    arguments: list[Expression]
 
     @override
     def token_literal(self) -> str:
@@ -211,8 +212,4 @@ class CallExpr(Expr):
 
     @override
     def __str__(self) -> str:
-        return f"{self.fn}({_join_commas(self.args)})"
-
-
-def _join_commas(xs: Sequence[Expr]) -> str:
-    return ", ".join(str(x) for x in xs)
+        return f"{self.function}({join_commas(self.arguments)})"

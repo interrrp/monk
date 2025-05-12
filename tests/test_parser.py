@@ -1,19 +1,19 @@
 import pytest
 
 from monk.ast import (
-    Bool,
-    CallExpr,
-    Expr,
-    ExprStmt,
-    FnLiteral,
-    Ident,
-    IfExpr,
-    InfixExpr,
-    IntLiteral,
-    LetStmt,
-    PrefixExpr,
+    BooleanLiteral,
+    CallExpression,
+    Expression,
+    ExpressionStatement,
+    FunctionLiteral,
+    Identifier,
+    IfExpression,
+    InfixExpression,
+    IntegerLiteral,
+    LetStatement,
+    PrefixExpression,
     Program,
-    ReturnStmt,
+    ReturnStatement,
 )
 from monk.lexer import Lexer
 from monk.parser import Parser
@@ -25,7 +25,7 @@ def parse_program(code: str) -> Program:
     return parser.parse_program()
 
 
-def test_let_stmts() -> None:
+def test_let_statements() -> None:
     code = """
         let x = 5;
         let y = 10;
@@ -38,18 +38,18 @@ def test_let_stmts() -> None:
     }
 
     program = parse_program(code)
-    assert len(program.stmts) == len(expected_vars)
+    assert len(program.statements) == len(expected_vars)
 
     for i, (expected_name, expected_value) in enumerate(expected_vars.items()):
-        stmt = program.stmts[i]
+        statement = program.statements[i]
 
-        assert isinstance(stmt, LetStmt)
-        assert stmt.token_literal() == "let"
-        assert_ident(stmt.name, expected_name)
-        assert_int_literal(stmt.value, expected_value)
+        assert isinstance(statement, LetStatement)
+        assert statement.token_literal() == "let"
+        assert_identifier(statement.name, expected_name)
+        assert_int_literal(statement.value, expected_value)
 
 
-def test_return_stmts() -> None:
+def test_return_statements() -> None:
     code = """
         return 5;
         return 10;
@@ -58,49 +58,49 @@ def test_return_stmts() -> None:
     expected_return_vals = [5, 10, 993322]
 
     program = parse_program(code)
-    assert len(program.stmts) == len(expected_return_vals)
+    assert len(program.statements) == len(expected_return_vals)
 
     for i, expected_return_val in enumerate(expected_return_vals):
-        stmt = program.stmts[i]
-        assert isinstance(stmt, ReturnStmt)
-        assert stmt.token_literal() == "return"
-        assert_int_literal(stmt.value, expected_return_val)
+        statement = program.statements[i]
+        assert isinstance(statement, ReturnStatement)
+        assert statement.token_literal() == "return"
+        assert_int_literal(statement.value, expected_return_val)
 
 
 def test_ident_exprs() -> None:
     name = "foobar"
 
     program = parse_program(f"{name};")
-    assert len(program.stmts) == 1
+    assert len(program.statements) == 1
 
-    stmt = program.stmts[0]
-    assert isinstance(stmt, ExprStmt)
-    assert_ident(stmt.expr, name)
+    statement = program.statements[0]
+    assert isinstance(statement, ExpressionStatement)
+    assert_identifier(statement.expression, name)
 
 
 def test_int() -> None:
     num = 42
 
     program = parse_program(f"{num};")
-    assert len(program.stmts) == 1
+    assert len(program.statements) == 1
 
-    stmt = program.stmts[0]
-    assert isinstance(stmt, ExprStmt)
-    assert_int_literal(stmt.expr, num)
+    statement = program.statements[0]
+    assert isinstance(statement, ExpressionStatement)
+    assert_int_literal(statement.expression, num)
 
 
 def test_bool() -> None:
     program = parse_program("true; false;")
 
-    stmt = program.stmts[0]
-    assert isinstance(stmt, ExprStmt)
-    assert isinstance(stmt.expr, Bool)
-    assert stmt.expr.value
+    statement = program.statements[0]
+    assert isinstance(statement, ExpressionStatement)
+    assert isinstance(statement.expression, BooleanLiteral)
+    assert statement.expression.value
 
-    stmt = program.stmts[1]
-    assert isinstance(stmt, ExprStmt)
-    assert isinstance(stmt.expr, Bool)
-    assert not stmt.expr.value
+    statement = program.statements[1]
+    assert isinstance(statement, ExpressionStatement)
+    assert isinstance(statement.expression, BooleanLiteral)
+    assert not statement.expression.value
 
 
 @pytest.mark.parametrize(
@@ -112,13 +112,13 @@ def test_bool() -> None:
 )
 def test_prefix_exprs(code: str, operator: str, value: int) -> None:
     program = parse_program(code)
-    assert len(program.stmts) == 1
+    assert len(program.statements) == 1
 
-    stmt = program.stmts[0]
-    assert isinstance(stmt, ExprStmt)
-    assert isinstance(stmt.expr, PrefixExpr)
-    assert stmt.expr.operator == operator
-    assert_int_literal(stmt.expr.right, value)
+    statement = program.statements[0]
+    assert isinstance(statement, ExpressionStatement)
+    assert isinstance(statement.expression, PrefixExpression)
+    assert statement.expression.operator == operator
+    assert_int_literal(statement.expression.right, value)
 
 
 @pytest.mark.parametrize(
@@ -136,14 +136,14 @@ def test_prefix_exprs(code: str, operator: str, value: int) -> None:
 )
 def test_infix_exprs(code: str, left: int, operator: str, right: int) -> None:
     program = parse_program(code)
-    assert len(program.stmts) == 1
+    assert len(program.statements) == 1
 
-    stmt = program.stmts[0]
-    assert isinstance(stmt, ExprStmt)
-    assert isinstance(stmt.expr, InfixExpr)
-    assert stmt.expr.operator == operator
-    assert_int_literal(stmt.expr.left, left)
-    assert_int_literal(stmt.expr.right, right)
+    statement = program.statements[0]
+    assert isinstance(statement, ExpressionStatement)
+    assert isinstance(statement.expression, InfixExpression)
+    assert statement.expression.operator == operator
+    assert_int_literal(statement.expression.left, left)
+    assert_int_literal(statement.expression.right, right)
 
 
 @pytest.mark.parametrize(
@@ -161,77 +161,79 @@ def test_grouped_exprs(code: str, ast: str) -> None:
     assert str(program) == ast
 
 
-def test_if_stmts() -> None:
+def test_if_statements() -> None:
     program = parse_program("if (4 > 2) { x } else { y };")
-    assert len(program.stmts) == 1
+    assert len(program.statements) == 1
 
-    stmt = program.stmts[0]
-    assert isinstance(stmt, ExprStmt)
-    assert isinstance(stmt.expr, IfExpr)
-    assert isinstance(stmt.expr.condition, InfixExpr)
+    statement = program.statements[0]
+    assert isinstance(statement, ExpressionStatement)
+    assert isinstance(statement.expression, IfExpression)
+    if_stmt = statement.expression
 
-    assert len(stmt.expr.consequence.stmts) == 1
-    consequence = stmt.expr.consequence.stmts[0]
-    assert isinstance(consequence, ExprStmt)
-    assert_ident(consequence.expr, "x")
+    assert isinstance(if_stmt.condition, InfixExpression)
 
-    assert stmt.expr.alternative is not None
-    assert len(stmt.expr.alternative.stmts) == 1
-    alternative = stmt.expr.alternative.stmts[0]
-    assert isinstance(alternative, ExprStmt)
-    assert_ident(alternative.expr, "y")
+    assert len(if_stmt.consequence.statements) == 1
+    consequence = if_stmt.consequence.statements[0]
+    assert isinstance(consequence, ExpressionStatement)
+    assert_identifier(consequence.expression, "x")
+
+    assert if_stmt.alternative is not None
+    assert len(if_stmt.alternative.statements) == 1
+    alternative = if_stmt.alternative.statements[0]
+    assert isinstance(alternative, ExpressionStatement)
+    assert_identifier(alternative.expression, "y")
 
 
 def test_fn_literals() -> None:
     program = parse_program("fn(x, y) { x + y; }")
-    assert len(program.stmts) == 1
+    assert len(program.statements) == 1
 
-    stmt = program.stmts[0]
-    assert isinstance(stmt, ExprStmt)
-    assert isinstance(stmt.expr, FnLiteral)
+    statement = program.statements[0]
+    assert isinstance(statement, ExpressionStatement)
+    assert isinstance(statement.expression, FunctionLiteral)
 
-    fn = stmt.expr
+    fn = statement.expression
     num_params = 2
-    assert len(fn.params) == num_params
-    assert fn.params[0].value == "x"
-    assert fn.params[1].value == "y"
+    assert len(fn.parameters) == num_params
+    assert fn.parameters[0].value == "x"
+    assert fn.parameters[1].value == "y"
 
     assert str(fn.body) == "{\n    (x + y);\n}"
 
 
 def test_call_exprs() -> None:
     program = parse_program("add(1, 2*3, 4+5)")
-    assert len(program.stmts) == 1
+    assert len(program.statements) == 1
 
-    stmt = program.stmts[0]
-    assert isinstance(stmt, ExprStmt)
+    statement = program.statements[0]
+    assert isinstance(statement, ExpressionStatement)
 
-    call = stmt.expr
-    assert isinstance(call, CallExpr)
-    assert_ident(call.fn, "add")
+    call = statement.expression
+    assert isinstance(call, CallExpression)
+    assert_identifier(call.function, "add")
 
     num_args = 3
-    assert len(call.args) == num_args
-    assert_int_literal(call.args[0], 1)
-    assert_infix_expr(call.args[1], 2, "*", 3)
-    assert_infix_expr(call.args[2], 4, "+", 5)
+    assert len(call.arguments) == num_args
+    assert_int_literal(call.arguments[0], 1)
+    assert_infix_expr(call.arguments[1], 2, "*", 3)
+    assert_infix_expr(call.arguments[2], 4, "+", 5)
 
 
-def assert_ident(expr: Expr, value: str) -> None:
-    assert isinstance(expr, Ident)
+def assert_identifier(expr: Expression, value: str) -> None:
+    assert isinstance(expr, Identifier)
     assert expr.value == value
     assert expr.token_literal() == value
 
 
-def assert_infix_expr(expr: Expr, left: int, operator: str, right: int) -> None:
-    assert isinstance(expr, InfixExpr)
+def assert_infix_expr(expr: Expression, left: int, operator: str, right: int) -> None:
+    assert isinstance(expr, InfixExpression)
     assert_int_literal(expr.left, left)
     assert expr.operator == operator
     assert_int_literal(expr.right, right)
 
 
-def assert_int_literal(expr: Expr, value: int) -> None:
-    assert isinstance(expr, IntLiteral)
+def assert_int_literal(expr: Expression, value: int) -> None:
+    assert isinstance(expr, IntegerLiteral)
     assert expr.value == value
     assert expr.token_literal() == str(value)
 

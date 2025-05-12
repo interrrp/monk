@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import final
+
 from monk.token import Token, TokenKind, lookup_ident
 
 _SINGLE_CHAR_TOKEN_KIND_MAP = {
@@ -20,6 +22,7 @@ _SINGLE_CHAR_TOKEN_KIND_MAP = {
 }
 
 
+@final
 class Lexer:
     def __init__(self, code: str) -> None:
         self._code = code
