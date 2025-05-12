@@ -236,6 +236,25 @@ def test_string_concatenation() -> None:
     assert result.value == "hello world"
 
 
+@pytest.mark.parametrize(
+    ("code", "expected_val"),
+    [
+        ('len("")', 0),
+        ('len("four")', 4),
+        ('len("hello world")', 11),
+        ("len(1)", "len takes a string, got INTEGER"),
+        ('len("one", "two")', "len takes 1 argument, got 2"),
+    ],
+)
+def test_builtin_functions(code: str, expected_val: int | str) -> None:
+    if isinstance(expected_val, str):
+        with pytest.raises((SyntaxError, TypeError, RuntimeError), match=re.escape(expected_val)):
+            _ = do_eval(code)
+    else:
+        result = do_eval(code)
+        assert_integer_obj(result, expected_val)
+
+
 def assert_integer_obj(obj: Object, val: int) -> None:
     assert isinstance(obj, Integer)
     assert obj.value == val

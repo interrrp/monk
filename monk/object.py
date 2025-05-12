@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, final, override
+from typing import TYPE_CHECKING, Protocol, final, override
 
 from monk.utils import join_commas
 
@@ -18,6 +18,7 @@ class ObjectType(Enum):
     RETURN_VALUE = "RETURN_VALUE"
     FUNCTION = "FUNCTION"
     STRING = "STRING"
+    BUILTIN = "BUILTIN"
 
     @override
     def __str__(self) -> str:
@@ -118,6 +119,24 @@ class String(Object):
         return f'"{self.value}"'
 
 
+class BuiltinFunction(Protocol):
+    def __call__(self, *args: Object) -> Object: ...
+
+
+@dataclass(frozen=True)
+class Builtin(Object):
+    fn: BuiltinFunction
+
+    @property
+    @override
+    def type(self) -> ObjectType:
+        return ObjectType.BUILTIN
+
+    @override
+    def __str__(self) -> str:
+        return "builtin function"
+
+
 @final
 class Environment:
     def __init__(self, outer: Environment | None = None) -> None:
@@ -134,3 +153,6 @@ class Environment:
 
     def __setitem__(self, name: str, obj: Object) -> None:
         self._map[name] = obj
+
+    def get(self, name: str) -> Object | None:
+        return self._map.get(name)

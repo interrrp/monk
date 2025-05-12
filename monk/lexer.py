@@ -94,6 +94,10 @@ class Lexer:
 
     def _eat_string(self) -> str:
         self._advance()
+
+        if self._current_char == '"':
+            return ""
+
         orig_pos = self._pos
         while self._next_char not in ('"', ""):
             self._advance()

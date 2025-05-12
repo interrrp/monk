@@ -27,6 +27,7 @@ def test_next_token() -> None:
 
         "foobar"
         " foo bar "
+        ""
     """
 
     expected_tokens = [
@@ -120,6 +121,7 @@ def test_next_token() -> None:
         ##
         Token(TokenKind.STRING, "foobar"),
         Token(TokenKind.STRING, " foo bar "),
+        Token(TokenKind.STRING, ""),
         ##
         Token(TokenKind.EOF, ""),
     ]

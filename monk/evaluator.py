@@ -17,11 +17,38 @@ from monk.ast import (
     Statement,
     StringLiteral,
 )
-from monk.object import Boolean, Environment, Function, Integer, Null, Object, ReturnValue, String
+from monk.object import (
+    Boolean,
+    Builtin,
+    Environment,
+    Function,
+    Integer,
+    Null,
+    Object,
+    ReturnValue,
+    String,
+)
 
 NULL = Null()
 TRUE = Boolean(value=True)
 FALSE = Boolean(value=False)
+
+
+def builtin_len(*args: Object) -> Object:
+    if len(args) != 1:
+        msg = f"len takes 1 argument, got {len(args)}"
+        raise RuntimeError(msg)
+
+    if not isinstance(args[0], String):
+        msg = f"len takes a string, got {args[0].type}"
+        raise TypeError(msg)
+
+    return Integer(len(args[0].value))
+
+
+builtins: dict[str, Builtin] = {
+    "len": Builtin(builtin_len),
+}
 
 
 def evaluate(node: Node, env: Environment) -> Object:  # noqa: PLR0911, PLR0912, C901
@@ -42,7 +69,14 @@ def evaluate(node: Node, env: Environment) -> Object:  # noqa: PLR0911, PLR0912,
             return String(node.value)
 
         case Identifier():
-            return env[node.value]
+            if v := env.get(node.value):
+                return v
+
+            if builtin := builtins.get(node.value):
+                return builtin
+
+            msg = f"Unknown identifier {node.value}"
+            raise NameError(msg)
 
         case BooleanLiteral():
             return TRUE if node.value else FALSE
@@ -68,19 +102,25 @@ def evaluate(node: Node, env: Environment) -> Object:  # noqa: PLR0911, PLR0912,
 
         case CallExpression():
             function = evaluate(node.function, env)
-            if not isinstance(function, Function):
-                msg = f"Expected function for call expression, got {function.type}"
-                raise TypeError(msg)
             args = evaluate_expressions(node.arguments, env)
 
-            scope_env = Environment(outer=function.environment)
-            for i, param in enumerate(function.parameters):
-                scope_env[param.value] = args[i]
+            match function:
+                case Builtin():
+                    return function.fn(*args)
 
-            result = evaluate(function.body, scope_env)
-            if isinstance(result, ReturnValue):
-                return result.value
-            return result
+                case Function():
+                    scope_env = Environment(outer=function.environment)
+                    for i, param in enumerate(function.parameters):
+                        scope_env[param.value] = args[i]
+
+                    result = evaluate(function.body, scope_env)
+                    if isinstance(result, ReturnValue):
+                        return result.value
+                    return result
+
+                case _:
+                    msg = f"Cannot call {function.type}"
+                    raise TypeError(msg)
 
         case LetStatement():
             val = evaluate(node.value, env)
