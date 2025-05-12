@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 from collections.abc import Callable
 from enum import IntEnum
+from typing import TYPE_CHECKING
 
 from monk.ast import (
     BlockStmt,
@@ -18,11 +21,10 @@ from monk.ast import (
     ReturnStmt,
     Stmt,
 )
-from monk.lexer import Lexer
 from monk.token import Token, TokenKind
 
-PrefixParseFn = Callable[[], Expr | None]
-InfixParseFn = Callable[[Expr | None], Expr | None]
+if TYPE_CHECKING:
+    from monk.lexer import Lexer
 
 
 class Precedence(IntEnum):
@@ -48,14 +50,68 @@ _PRECEDENCES: dict[TokenKind, Precedence] = {
 }
 
 
-class Parser:
+class TokenIterator:
+    """
+    Abstracts iteration over a lexer.
+
+    - `current`: The current token.
+    - `next`: The next token (a.k.a. "peek token").
+    """
+
     def __init__(self, lexer: Lexer) -> None:
         self._lexer = lexer
 
-        self._current_token = Token(TokenKind.EOF, "")
-        self._next_token = Token(TokenKind.EOF, "")
-        self._advance()
-        self._advance()
+        self.current = Token(TokenKind.ILLEGAL, "")
+        self.next = Token(TokenKind.ILLEGAL, "")
+
+        self.advance()  # Populate next token
+        self.advance()  # Populate current token
+
+    def advance(self) -> None:
+        "Advance by one token."
+        self.current = self.next
+        self.next = next(self._lexer)
+
+    def current_is(self, kind: TokenKind) -> bool:
+        "Return whether the current token is of the given kind."
+        return self.current.kind == kind
+
+    def next_is(self, kind: TokenKind) -> bool:
+        "Return whether the next token is of the given kind."
+        return self.next.kind == kind
+
+    def expect_next(self, kind: TokenKind) -> None:
+        """
+        Expect the next token to be of the given kind.
+
+        If it is, the iterator will be advanced.
+        If it is not, a `SyntaxError` will be raised.
+        """
+
+        if self.next.kind != kind:
+            msg = f"Expected next token to be {kind}, got {self.next.kind}"
+            raise SyntaxError(msg)
+
+        self.advance()
+
+
+PrefixParseFn = Callable[[], Expr]
+"""A prefix parsing function produces a node when it matches a certain prefix."""
+
+InfixParseFn = Callable[[Expr], Expr]
+"""
+An infix parsing function produces a node when it matches in between two expressions.
+
+Infix parsing functions take in the expression on the left. It is up to the function to
+consume the expression on the right.
+"""
+
+
+class Parser:
+    "A Pratt parser for Monkey."
+
+    def __init__(self, lexer: Lexer) -> None:
+        self._tokens = TokenIterator(lexer)
 
         self._prefix_parse_fns: dict[TokenKind, PrefixParseFn] = {
             TokenKind.IDENT: self._parse_ident,
@@ -68,6 +124,7 @@ class Parser:
             TokenKind.IF: self._parse_if_expr,
             TokenKind.FUNCTION: self._parse_fn_literal,
         }
+
         self._infix_parse_fns: dict[TokenKind, InfixParseFn] = {
             TokenKind.EQ: self._parse_infix_expr,
             TokenKind.NOT_EQ: self._parse_infix_expr,
@@ -80,23 +137,17 @@ class Parser:
             TokenKind.LPAREN: self._parse_call_expr,
         }
 
-    def _advance(self) -> None:
-        self._current_token = self._next_token
-        self._next_token = next(self._lexer)
-
     def parse_program(self) -> Program:
         prog = Program([])
 
-        while self._current_token.kind != TokenKind.EOF:
-            stmt = self._parse_stmt()
-            if stmt is not None:
-                prog.stmts.append(stmt)
-            self._advance()
+        while not self._tokens.current_is(TokenKind.EOF):
+            prog.stmts.append(self._parse_stmt())
+            self._tokens.advance()
 
         return prog
 
-    def _parse_stmt(self) -> Stmt | None:
-        match self._current_token.kind:
+    def _parse_stmt(self) -> Stmt:
+        match self._tokens.current.kind:
             case TokenKind.LET:
                 return self._parse_let_stmt()
             case TokenKind.RETURN:
@@ -104,224 +155,200 @@ class Parser:
             case _:
                 return self._parse_expr_stmt()
 
-    def _parse_let_stmt(self) -> LetStmt | None:
-        token = self._current_token
+    def _parse_let_stmt(self) -> LetStmt:
+        # let
+        token = self._tokens.current
 
-        self._expect_next(TokenKind.IDENT)
-        name = Ident(self._current_token, self._current_token.literal)
+        # let <name>
+        self._tokens.expect_next(TokenKind.IDENT)
+        name = self._parse_ident()
 
-        self._expect_next(TokenKind.ASSIGN)
-        self._advance()
+        # let <name> =
+        self._tokens.expect_next(TokenKind.ASSIGN)
+        self._tokens.advance()
 
+        # let <name> = <value>
         value = self._parse_expr()
-        if value is None:
-            msg = "Expected value for let statement"
-            raise SyntaxError(msg)
 
-        if self._next_token.kind == TokenKind.SEMICOLON:
-            self._advance()
+        # let <name> = value>;
+        self._tokens.expect_next(TokenKind.SEMICOLON)
 
         return LetStmt(token, name, value)
 
-    def _parse_return_stmt(self) -> ReturnStmt | None:
-        token = self._current_token
+    def _parse_return_stmt(self) -> ReturnStmt:
+        token = self._tokens.current
+        self._tokens.advance()
 
-        self._advance()
-
+        # return <value>
         value = self._parse_expr()
-        if value is None:
-            msg = "Expected value for return statement"
-            raise SyntaxError(msg)
 
-        if self._next_token.kind == TokenKind.SEMICOLON:
-            self._advance()
+        # return <value>;
+        self._tokens.expect_next(TokenKind.SEMICOLON)
 
         return ReturnStmt(token, value)
 
-    def _parse_if_expr(self) -> Expr | None:
-        token = self._current_token
-        self._expect_next(TokenKind.LPAREN)
-        self._advance()
-
-        condition = self._parse_expr()
-        if condition is None:
-            return None
-
-        self._expect_next(TokenKind.RPAREN)
-        self._expect_next(TokenKind.LBRACE)
-
-        consequence = self._parse_block_stmt()
-        if consequence is None:
-            msg = "Expected consequence to if statement"
-            raise SyntaxError(msg)
-
-        alternative = None
-        if self._next_token.kind == TokenKind.ELSE:
-            self._advance()
-            self._expect_next(TokenKind.LBRACE)
-            alternative = self._parse_block_stmt()
-            if alternative is None:
-                msg = "Expected alternative to if statement"
-                raise SyntaxError(msg)
-
-        return IfExpr(token, condition, consequence, alternative)
-
-    def _parse_block_stmt(self) -> BlockStmt | None:
-        token = self._current_token
-
-        self._advance()
-
-        stmts: list[Stmt] = []
-        while self._current_token.kind not in (TokenKind.RBRACE, TokenKind.EOF):
-            stmt = self._parse_stmt()
-            if stmt is not None:
-                stmts.append(stmt)
-            self._advance()
-
-        return BlockStmt(token, stmts)
-
-    def _parse_expr_stmt(self) -> ExprStmt | None:
-        token = self._current_token
+    def _parse_expr_stmt(self) -> ExprStmt:
         expr = self._parse_expr()
-        if self._next_token.kind == TokenKind.SEMICOLON:
-            self._advance()
-        if expr is None:
-            return None
-        return ExprStmt(token, expr)
 
-    def _parse_expr(self, precedence: Precedence = Precedence.LOWEST) -> Expr | None:
-        prefix = self._prefix_parse_fns.get(self._current_token.kind)
+        if self._tokens.next_is(TokenKind.SEMICOLON):
+            self._tokens.advance()
+
+        return ExprStmt(self._tokens.current, expr)
+
+    def _parse_expr(self, precedence: Precedence = Precedence.LOWEST) -> Expr:
+        prefix = self._prefix_parse_fns.get(self._tokens.current.kind)
         if prefix is None:
-            msg = f"No prefix parse function for {self._current_token.kind}"
+            msg = f"No prefix parse function for {self._tokens.current.kind}"
             raise SyntaxError(msg)
         left = prefix()
 
-        while self._next_token.kind != TokenKind.SEMICOLON and precedence < self._next_precedence():
-            infix = self._infix_parse_fns.get(self._next_token.kind)
+        while (
+            self._tokens.next.kind != TokenKind.SEMICOLON and precedence < self._next_precedence()
+        ):
+            infix = self._infix_parse_fns.get(self._tokens.next.kind)
             if infix is None:
                 return left
 
-            self._advance()
+            self._tokens.advance()
             left = infix(left)
 
         return left
 
-    def _parse_prefix_expr(self) -> Expr | None:
-        token = self._current_token
+    def _parse_if_expr(self) -> Expr:
+        # if
+        token = self._tokens.current
+
+        # if (
+        self._tokens.expect_next(TokenKind.LPAREN)
+        self._tokens.advance()
+
+        # if (<condition>
+        condition = self._parse_expr()
+
+        # if (<condition>) {
+        self._tokens.expect_next(TokenKind.RPAREN)
+        self._tokens.expect_next(TokenKind.LBRACE)
+
+        # if (<condition>) { <consequence> }
+        consequence = self._parse_block_stmt()
+
+        # if (<condition>) { <consequence> } else { <alternative> }
+        alternative = None
+        if self._tokens.next.kind == TokenKind.ELSE:
+            self._tokens.advance()
+            self._tokens.expect_next(TokenKind.LBRACE)
+            alternative = self._parse_block_stmt()
+
+        return IfExpr(token, condition, consequence, alternative)
+
+    def _parse_block_stmt(self) -> BlockStmt:
+        token = self._tokens.current
+
+        self._tokens.advance()
+
+        stmts: list[Stmt] = []
+        while self._tokens.current.kind not in (TokenKind.RBRACE, TokenKind.EOF):
+            stmts.append(self._parse_stmt())
+            self._tokens.advance()
+
+        return BlockStmt(token, stmts)
+
+    def _parse_prefix_expr(self) -> Expr:
+        token = self._tokens.current
         operator = token.literal
 
-        self._advance()
-
+        self._tokens.advance()
         right = self._parse_expr(Precedence.PREFIX)
-        if right is None:
-            return None
 
         return PrefixExpr(token, operator, right)
 
-    def _parse_infix_expr(self, left: Expr | None) -> Expr | None:
-        token = self._current_token
+    def _parse_infix_expr(self, left: Expr) -> Expr:
+        token = self._tokens.current
         operator = token.literal
 
         precedence = self._current_precedence()
-        self._advance()
+        self._tokens.advance()
         right = self._parse_expr(precedence)
-
-        if left is None or right is None:
-            return None
 
         return InfixExpr(token, left, operator, right)
 
-    def _parse_grouped_expr(self) -> Expr | None:
-        self._advance()
+    def _parse_grouped_expr(self) -> Expr:
+        self._tokens.advance()
         expr = self._parse_expr()
-        self._expect_next(TokenKind.RPAREN)
+        self._tokens.expect_next(TokenKind.RPAREN)
         return expr
 
-    def _parse_fn_literal(self) -> FnLiteral | None:
-        token = self._current_token
+    def _parse_fn_literal(self) -> FnLiteral:
+        token = self._tokens.current
 
-        self._expect_next(TokenKind.LPAREN)
+        self._tokens.expect_next(TokenKind.LPAREN)
         params = self._parse_fn_params()
 
-        self._expect_next(TokenKind.LBRACE)
+        self._tokens.expect_next(TokenKind.LBRACE)
         body = self._parse_block_stmt()
-        if body is None:
-            msg = "Expected body for function literal"
-            raise SyntaxError(msg)
 
         return FnLiteral(token, params, body)
 
     def _parse_fn_params(self) -> list[Ident]:
         params: list[Ident] = []
 
-        if self._next_token.kind == TokenKind.RPAREN:
-            self._advance()
+        if self._tokens.next.kind == TokenKind.RPAREN:
+            self._tokens.advance()
             return params
 
-        self._advance()
+        self._tokens.advance()
 
         params.append(self._parse_ident())
 
-        while self._next_token.kind == TokenKind.COMMA:
-            self._advance()
-            self._advance()
+        while self._tokens.next.kind == TokenKind.COMMA:
+            self._tokens.advance()
+            self._tokens.advance()
             params.append(self._parse_ident())
 
-        self._expect_next(TokenKind.RPAREN)
+        self._tokens.expect_next(TokenKind.RPAREN)
 
         return params
 
-    def _parse_call_expr(self, fn: Expr | None) -> CallExpr:
+    def _parse_call_expr(self, fn: Expr) -> CallExpr:
         if not isinstance(fn, Ident | FnLiteral):
             msg = "Expected identifier or function literal for function call"
             raise TypeError(msg)
 
-        token = self._current_token
+        token = self._tokens.current
         args = self._parse_call_args()
         return CallExpr(token, fn, args)
 
     def _parse_call_args(self) -> list[Expr]:
         args: list[Expr] = []
 
-        if self._next_token.kind == TokenKind.RPAREN:
-            self._advance()
+        if self._tokens.next.kind == TokenKind.RPAREN:
+            self._tokens.advance()
             return args
 
-        self._advance()
+        self._tokens.advance()
 
-        expr = self._parse_expr()
-        if expr is not None:
-            args.append(expr)
+        args.append(self._parse_expr())
 
-        while self._next_token.kind == TokenKind.COMMA:
-            self._advance()
-            self._advance()
-            expr = self._parse_expr()
-            if expr is not None:
-                args.append(expr)
+        while self._tokens.next.kind == TokenKind.COMMA:
+            self._tokens.advance()
+            self._tokens.advance()
+            args.append(self._parse_expr())
 
-        self._expect_next(TokenKind.RPAREN)
+        self._tokens.expect_next(TokenKind.RPAREN)
 
         return args
 
     def _parse_ident(self) -> Ident:
-        return Ident(self._current_token, self._current_token.literal)
+        return Ident(self._tokens.current, self._tokens.current.literal)
 
     def _parse_int(self) -> IntLiteral:
-        return IntLiteral(self._current_token, int(self._current_token.literal))
+        return IntLiteral(self._tokens.current, int(self._tokens.current.literal))
 
     def _parse_bool(self) -> Bool:
-        return Bool(self._current_token, self._current_token.kind == TokenKind.TRUE)
+        return Bool(self._tokens.current, self._tokens.current.kind == TokenKind.TRUE)
 
     def _current_precedence(self) -> Precedence:
-        return _PRECEDENCES.get(self._current_token.kind, Precedence.LOWEST)
+        return _PRECEDENCES.get(self._tokens.current.kind, Precedence.LOWEST)
 
     def _next_precedence(self) -> Precedence:
-        return _PRECEDENCES.get(self._next_token.kind, Precedence.LOWEST)
-
-    def _expect_next(self, kind: TokenKind) -> None:
-        if self._next_token.kind == kind:
-            self._advance()
-        else:
-            msg = f"Expected next token to be {kind}, got {self._next_token}"
-            raise SyntaxError(msg)
+        return _PRECEDENCES.get(self._tokens.next.kind, Precedence.LOWEST)

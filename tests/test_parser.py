@@ -12,10 +12,17 @@ from monk.ast import (
     IntLiteral,
     LetStmt,
     PrefixExpr,
+    Program,
     ReturnStmt,
 )
 from monk.lexer import Lexer
 from monk.parser import Parser
+
+
+def parse_program(code: str) -> Program:
+    lexer = Lexer(code)
+    parser = Parser(lexer)
+    return parser.parse_program()
 
 
 def test_let_stmts() -> None:
@@ -24,17 +31,13 @@ def test_let_stmts() -> None:
         let y = 10;
         let foobar = 838383;
     """
-
     expected_vars = {
         "x": 5,
         "y": 10,
         "foobar": 838383,
     }
 
-    lexer = Lexer(code)
-    parser = Parser(lexer)
-    program = parser.parse_program()
-
+    program = parse_program(code)
     assert len(program.stmts) == len(expected_vars)
 
     for i, (expected_name, expected_value) in enumerate(expected_vars.items()):
@@ -42,8 +45,7 @@ def test_let_stmts() -> None:
 
         assert isinstance(stmt, LetStmt)
         assert stmt.token_literal() == "let"
-        assert stmt.name.value == expected_name
-        assert stmt.name.token_literal() == expected_name
+        assert_ident(stmt.name, expected_name)
         assert_int_literal(stmt.value, expected_value)
 
 
@@ -53,13 +55,9 @@ def test_return_stmts() -> None:
         return 10;
         return 993322;
     """
-
     expected_return_vals = [5, 10, 993322]
 
-    lexer = Lexer(code)
-    parser = Parser(lexer)
-    program = parser.parse_program()
-
+    program = parse_program(code)
     assert len(program.stmts) == len(expected_return_vals)
 
     for i, expected_return_val in enumerate(expected_return_vals):
@@ -72,39 +70,27 @@ def test_return_stmts() -> None:
 def test_ident_exprs() -> None:
     name = "foobar"
 
-    lexer = Lexer(name + ";")
-    parser = Parser(lexer)
-    program = parser.parse_program()
-
+    program = parse_program(f"{name};")
     assert len(program.stmts) == 1
 
     stmt = program.stmts[0]
     assert isinstance(stmt, ExprStmt)
-    assert isinstance(stmt.expr, Ident)
-    assert stmt.expr.value == name
-    assert stmt.expr.token_literal() == name
+    assert_ident(stmt.expr, name)
 
 
 def test_int() -> None:
     num = 42
 
-    lexer = Lexer(f"{num};")
-    parser = Parser(lexer)
-    program = parser.parse_program()
-
+    program = parse_program(f"{num};")
     assert len(program.stmts) == 1
 
     stmt = program.stmts[0]
     assert isinstance(stmt, ExprStmt)
-    assert isinstance(stmt.expr, IntLiteral)
-    assert stmt.expr.value == num
-    assert stmt.expr.token_literal() == str(num)
+    assert_int_literal(stmt.expr, num)
 
 
 def test_bool() -> None:
-    lexer = Lexer("true; false;")
-    parser = Parser(lexer)
-    program = parser.parse_program()
+    program = parse_program("true; false;")
 
     stmt = program.stmts[0]
     assert isinstance(stmt, ExprStmt)
@@ -125,19 +111,14 @@ def test_bool() -> None:
     ],
 )
 def test_prefix_exprs(code: str, operator: str, value: int) -> None:
-    lexer = Lexer(code)
-    parser = Parser(lexer)
-    program = parser.parse_program()
-
+    program = parse_program(code)
     assert len(program.stmts) == 1
 
     stmt = program.stmts[0]
     assert isinstance(stmt, ExprStmt)
     assert isinstance(stmt.expr, PrefixExpr)
     assert stmt.expr.operator == operator
-    assert isinstance(stmt.expr.right, IntLiteral)
-    assert stmt.expr.right.value == value
-    assert stmt.expr.right.token_literal() == str(value)
+    assert_int_literal(stmt.expr.right, value)
 
 
 @pytest.mark.parametrize(
@@ -154,10 +135,7 @@ def test_prefix_exprs(code: str, operator: str, value: int) -> None:
     ],
 )
 def test_infix_exprs(code: str, left: int, operator: str, right: int) -> None:
-    lexer = Lexer(code)
-    parser = Parser(lexer)
-    program = parser.parse_program()
-
+    program = parse_program(code)
     assert len(program.stmts) == 1
 
     stmt = program.stmts[0]
@@ -179,17 +157,12 @@ def test_infix_exprs(code: str, left: int, operator: str, right: int) -> None:
     ],
 )
 def test_grouped_exprs(code: str, ast: str) -> None:
-    lexer = Lexer(code)
-    parser = Parser(lexer)
-    program = parser.parse_program()
+    program = parse_program(code)
     assert str(program) == ast
 
 
 def test_if_stmts() -> None:
-    lexer = Lexer("if (x < y) { x } else { y }")
-    parser = Parser(lexer)
-    program = parser.parse_program()
-
+    program = parse_program("if (4 > 2) { x } else { y };")
     assert len(program.stmts) == 1
 
     stmt = program.stmts[0]
@@ -200,22 +173,17 @@ def test_if_stmts() -> None:
     assert len(stmt.expr.consequence.stmts) == 1
     consequence = stmt.expr.consequence.stmts[0]
     assert isinstance(consequence, ExprStmt)
-    assert isinstance(consequence.expr, Ident)
-    assert consequence.expr.value == "x"
+    assert_ident(consequence.expr, "x")
 
     assert stmt.expr.alternative is not None
     assert len(stmt.expr.alternative.stmts) == 1
     alternative = stmt.expr.alternative.stmts[0]
     assert isinstance(alternative, ExprStmt)
-    assert isinstance(alternative.expr, Ident)
-    assert alternative.expr.value == "y"
+    assert_ident(alternative.expr, "y")
 
 
 def test_fn_literals() -> None:
-    lexer = Lexer("fn(x, y) { x + y; }")
-    parser = Parser(lexer)
-    program = parser.parse_program()
-
+    program = parse_program("fn(x, y) { x + y; }")
     assert len(program.stmts) == 1
 
     stmt = program.stmts[0]
@@ -232,17 +200,16 @@ def test_fn_literals() -> None:
 
 
 def test_call_exprs() -> None:
-    lexer = Lexer("add(1, 2*3, 4+5)")
-    parser = Parser(lexer)
-    program = parser.parse_program()
-
+    program = parse_program("add(1, 2*3, 4+5)")
     assert len(program.stmts) == 1
+
     stmt = program.stmts[0]
     assert isinstance(stmt, ExprStmt)
 
     call = stmt.expr
     assert isinstance(call, CallExpr)
     assert_ident(call.fn, "add")
+
     num_args = 3
     assert len(call.args) == num_args
     assert_int_literal(call.args[0], 1)
