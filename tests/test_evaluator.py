@@ -165,6 +165,10 @@ def test_return_statements(code: str, expected_val: int) -> None:
             "Unknown operator: BOOLEAN + BOOLEAN",
         ),
         (
+            '"hello" - "world"',
+            "Unknown operator: STRING - STRING",
+        ),
+        (
             """
             if (10 > 1) {
                 if (10 > 1) {
@@ -222,6 +226,12 @@ def test_function_application(code: str, expected_val: int) -> None:
 
 def test_strings() -> None:
     result = do_eval('"hello world"')
+    assert isinstance(result, String)
+    assert result.value == "hello world"
+
+
+def test_string_concatenation() -> None:
+    result = do_eval('"hello" + " " + "world"')
     assert isinstance(result, String)
     assert result.value == "hello world"
 

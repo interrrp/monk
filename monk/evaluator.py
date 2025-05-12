@@ -132,14 +132,17 @@ def evaluate_infix_expression(operator: str, left: Object, right: Object) -> Obj
     lhs = getattr(left, "value", None)
     rhs = getattr(right, "value", None)
 
-    if not isinstance(lhs, int | bool) or not isinstance(rhs, int | bool):
-        msg = "Infix expression values must be integers or booleans"
+    if not isinstance(lhs, int | bool | str) or not isinstance(rhs, int | bool | str):
+        msg = "Infix expression values must be integers, booleans, or strings"
         raise TypeError(msg)
 
     if operator == "==":
         return Boolean(lhs == rhs)
     if operator == "!=":
         return Boolean(lhs != rhs)
+
+    if operator == "+" and isinstance(lhs, str) and isinstance(rhs, str):
+        return String(lhs + rhs)
 
     if isinstance(left, Integer) and isinstance(right, Integer):
         return evaluate_integer_infix_expression(operator, left, right)
