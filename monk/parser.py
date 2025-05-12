@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from enum import IntEnum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, final
 
 from monk.ast import (
     BlockStmt,
@@ -50,6 +50,7 @@ _PRECEDENCES: dict[TokenKind, Precedence] = {
 }
 
 
+@final
 class TokenIterator:
     """
     Abstracts iteration over a lexer.
@@ -107,6 +108,7 @@ consume the expression on the right.
 """
 
 
+@final
 class Parser:
     "A Pratt parser for Monkey."
 

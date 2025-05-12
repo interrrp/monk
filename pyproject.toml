@@ -13,6 +13,3 @@ lint.ignore = ["D"]
 lint.per-file-ignores = { "tests/**/*.py" = [
     "S101", # Allow asserts in tests
 ] }
-
-[tool.pyright]
-typeCheckingMode = "strict"

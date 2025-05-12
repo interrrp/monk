@@ -241,4 +241,4 @@ def test_errors() -> None:
     parser = Parser(lexer)
 
     with pytest.raises(SyntaxError):
-        parser.parse_program()
+        _ = parser.parse_program()
