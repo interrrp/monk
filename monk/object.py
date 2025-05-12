@@ -17,6 +17,7 @@ class ObjectType(Enum):
     NULL = "NULL"
     RETURN_VALUE = "RETURN_VALUE"
     FUNCTION = "FUNCTION"
+    STRING = "STRING"
 
     @override
     def __str__(self) -> str:
@@ -101,6 +102,20 @@ class Function(Object):
     @override
     def __str__(self) -> str:
         return f"fn({join_commas(self.parameters)}) {self.body}"
+
+
+@dataclass(frozen=True)
+class String(Object):
+    value: str
+
+    @property
+    @override
+    def type(self) -> ObjectType:
+        return ObjectType.STRING
+
+    @override
+    def __str__(self) -> str:
+        return f'"{self.value}"'
 
 
 @final

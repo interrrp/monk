@@ -50,6 +50,9 @@ class Lexer:
                 self._advance()
                 token = Token(TokenKind.NOT_EQ, "!=")
 
+            case '"':
+                token = Token(TokenKind.STRING, self._eat_string())
+
             case _ if self._current_char in _SINGLE_CHAR_TOKEN_KIND_MAP:
                 token = Token(
                     kind=_SINGLE_CHAR_TOKEN_KIND_MAP[self._current_char],
@@ -88,6 +91,14 @@ class Lexer:
         while self._next_char.isdigit():
             self._advance()
         return self._code[orig_pos : self._pos + 1]
+
+    def _eat_string(self) -> str:
+        self._advance()
+        orig_pos = self._pos
+        while self._next_char not in ('"', ""):
+            self._advance()
+        self._advance()
+        return self._code[orig_pos : self._pos]
 
     def _advance(self) -> None:
         self._pos += 1

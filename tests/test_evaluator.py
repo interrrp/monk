@@ -4,7 +4,7 @@ import pytest
 
 from monk.evaluator import NULL, evaluate
 from monk.lexer import Lexer
-from monk.object import Boolean, Environment, Function, Integer, Object
+from monk.object import Boolean, Environment, Function, Integer, Object, String
 from monk.parser import Parser
 
 
@@ -218,6 +218,12 @@ def test_function_objects() -> None:
 def test_function_application(code: str, expected_val: int) -> None:
     result = do_eval(code)
     assert_integer_obj(result, expected_val)
+
+
+def test_strings() -> None:
+    result = do_eval('"hello world"')
+    assert isinstance(result, String)
+    assert result.value == "hello world"
 
 
 def assert_integer_obj(obj: Object, val: int) -> None:

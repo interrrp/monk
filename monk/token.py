@@ -8,6 +8,7 @@ class TokenKind(Enum):
 
     IDENT = "IDENT"
     INT = "INT"
+    STRING = "STRING"
 
     ASSIGN = "="
     PLUS = "+"

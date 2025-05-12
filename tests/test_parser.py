@@ -14,6 +14,7 @@ from monk.ast import (
     PrefixExpression,
     Program,
     ReturnStatement,
+    StringLiteral,
 )
 from monk.lexer import Lexer
 from monk.parser import Parser
@@ -217,6 +218,17 @@ def test_call_exprs() -> None:
     assert_int_literal(call.arguments[0], 1)
     assert_infix_expr(call.arguments[1], 2, "*", 3)
     assert_infix_expr(call.arguments[2], 4, "+", 5)
+
+
+def test_strings() -> None:
+    program = parse_program('"hello world"')
+
+    statement = program.statements[0]
+    assert isinstance(statement, ExpressionStatement)
+
+    string = statement.expression
+    assert isinstance(string, StringLiteral)
+    assert string.value == "hello world"
 
 
 def assert_identifier(expr: Expression, value: str) -> None:

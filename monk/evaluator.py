@@ -15,8 +15,9 @@ from monk.ast import (
     Program,
     ReturnStatement,
     Statement,
+    StringLiteral,
 )
-from monk.object import Boolean, Environment, Function, Integer, Null, Object, ReturnValue
+from monk.object import Boolean, Environment, Function, Integer, Null, Object, ReturnValue, String
 
 NULL = Null()
 TRUE = Boolean(value=True)
@@ -36,6 +37,9 @@ def evaluate(node: Node, env: Environment) -> Object:  # noqa: PLR0911, PLR0912,
 
         case IntegerLiteral():
             return Integer(node.value)
+
+        case StringLiteral():
+            return String(node.value)
 
         case Identifier():
             return env[node.value]

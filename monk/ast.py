@@ -106,6 +106,20 @@ class IntegerLiteral(Expression):
 
 
 @dataclass(frozen=True)
+class StringLiteral(Expression):
+    token: Token
+    value: str
+
+    @override
+    def token_literal(self) -> str:
+        return self.token.literal
+
+    @override
+    def __str__(self) -> str:
+        return f'"{self.value}"'
+
+
+@dataclass(frozen=True)
 class PrefixExpression(Expression):
     token: Token
     operator: str

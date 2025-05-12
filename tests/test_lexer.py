@@ -24,6 +24,9 @@ def test_next_token() -> None:
 
         10 == 10;
         10 != 9;
+
+        "foobar"
+        " foo bar "
     """
 
     expected_tokens = [
@@ -114,6 +117,9 @@ def test_next_token() -> None:
         Token(TokenKind.NOT_EQ, "!="),
         Token(TokenKind.INT, "9"),
         Token(TokenKind.SEMICOLON, ";"),
+        ##
+        Token(TokenKind.STRING, "foobar"),
+        Token(TokenKind.STRING, " foo bar "),
         ##
         Token(TokenKind.EOF, ""),
     ]

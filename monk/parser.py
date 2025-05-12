@@ -20,6 +20,7 @@ from monk.ast import (
     Program,
     ReturnStatement,
     Statement,
+    StringLiteral,
 )
 from monk.token import Token, TokenKind
 
@@ -117,14 +118,15 @@ class Parser:
 
         self._prefix_parse_fns: dict[TokenKind, PrefixParseFn] = {
             TokenKind.IDENT: self._parse_identifier,
-            TokenKind.INT: self._parse_integer,
+            TokenKind.INT: self._parse_integer_literal,
+            TokenKind.STRING: self._parse_string_literal,
+            TokenKind.FUNCTION: self._parse_function_literal,
             TokenKind.BANG: self._parse_prefix_expression,
             TokenKind.MINUS: self._parse_prefix_expression,
             TokenKind.TRUE: self._parse_boolean,
             TokenKind.FALSE: self._parse_boolean,
             TokenKind.LPAREN: self._parse_grouped_expression,
             TokenKind.IF: self._parse_if_expression,
-            TokenKind.FUNCTION: self._parse_function_literal,
         }
 
         self._infix_parse_fns: dict[TokenKind, InfixParseFn] = {
@@ -311,6 +313,9 @@ class Parser:
 
         return params
 
+    def _parse_string_literal(self) -> StringLiteral:
+        return StringLiteral(self._tokens.current, self._tokens.current.literal)
+
     def _parse_call_expression(self, fn: Expression) -> CallExpression:
         if not isinstance(fn, Identifier | FunctionLiteral):
             msg = "Expected identifier or function literal for function call"
@@ -343,7 +348,7 @@ class Parser:
     def _parse_identifier(self) -> Identifier:
         return Identifier(self._tokens.current, self._tokens.current.literal)
 
-    def _parse_integer(self) -> IntegerLiteral:
+    def _parse_integer_literal(self) -> IntegerLiteral:
         return IntegerLiteral(self._tokens.current, int(self._tokens.current.literal))
 
     def _parse_boolean(self) -> BooleanLiteral:
