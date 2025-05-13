@@ -2,13 +2,13 @@ from pathlib import Path
 from sys import argv
 
 from monk.evaluator import evaluate
-from monk.lexer import Lexer
+from monk.lexer import lex
 from monk.object import Environment
 from monk.parser import Parser
 
 
 def run(code: str, env: Environment) -> None:
-    lexer = Lexer(code)
+    lexer = lex(code)
     parser = Parser(lexer)
     program = parser.parse_program()
     result = evaluate(program, env)

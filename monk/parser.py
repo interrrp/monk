@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Generator
 from enum import IntEnum
-from typing import TYPE_CHECKING, final
+from typing import final
 
 from monk.ast import (
     BlockStatement,
@@ -23,9 +23,6 @@ from monk.ast import (
     StringLiteral,
 )
 from monk.token import Token, TokenType
-
-if TYPE_CHECKING:
-    from monk.lexer import Lexer
 
 
 class Precedence(IntEnum):
@@ -60,7 +57,7 @@ class TokenIterator:
     - `next`: The next token (a.k.a. "peek token").
     """
 
-    def __init__(self, lexer: Lexer) -> None:
+    def __init__(self, lexer: Generator[Token]) -> None:
         self._lexer = lexer
 
         self.current = Token(TokenType.ILLEGAL, "")
@@ -113,7 +110,7 @@ consume the expression on the right.
 class Parser:
     "A Pratt parser for Monkey."
 
-    def __init__(self, lexer: Lexer) -> None:
+    def __init__(self, lexer: Generator[Token]) -> None:
         self._tokens = TokenIterator(lexer)
 
         self._prefix_parse_fns: dict[TokenType, PrefixParseFn] = {

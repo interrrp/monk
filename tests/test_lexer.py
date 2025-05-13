@@ -1,4 +1,4 @@
-from monk.lexer import Lexer
+from monk.lexer import lex
 from monk.token import Token, TokenType
 
 
@@ -126,7 +126,7 @@ def test_next_token() -> None:
         Token(TokenType.END_OF_FILE, ""),
     ]
 
-    lexer = Lexer(code)
+    lexer = lex(code)
 
     for i, expected_token in enumerate(expected_tokens):
         actual_token = next(lexer)

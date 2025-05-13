@@ -3,7 +3,7 @@ import re
 import pytest
 
 from monk.evaluator import NULL, evaluate
-from monk.lexer import Lexer
+from monk.lexer import lex
 from monk.object import Boolean, Environment, Function, Integer, Object, String
 from monk.parser import Parser
 
@@ -266,7 +266,7 @@ def assert_boolean_obj(obj: Object, val: bool) -> None:
 
 
 def do_eval(code: str) -> Object:
-    lexer = Lexer(code)
+    lexer = lex(code)
     parser = Parser(lexer)
     program = parser.parse_program()
     env = Environment()

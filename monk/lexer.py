@@ -1,130 +1,76 @@
 from __future__ import annotations
 
-from typing import final
+import re
+from typing import TYPE_CHECKING
 
-from monk.token import Token, TokenType, lookup_ident
+from monk.token import Token, TokenType
 
-_SINGLE_CHAR_TOKEN_TYPE_MAP = {
-    "=": TokenType.ASSIGN,
-    "+": TokenType.PLUS,
-    "-": TokenType.MINUS,
-    "*": TokenType.ASTERISK,
-    "/": TokenType.SLASH,
-    "(": TokenType.LEFT_PAREN,
-    ")": TokenType.RIGHT_PAREN,
-    "{": TokenType.LEFT_BRACE,
-    "}": TokenType.RIGHT_BRACE,
-    ";": TokenType.SEMICOLON,
-    ",": TokenType.COMMA,
-    "<": TokenType.LESSER_THAN,
-    ">": TokenType.GREATER_THAN,
-    "!": TokenType.BANG,
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+PATTERNS = {
+    TokenType.LET: r"\blet\b",
+    TokenType.FUNCTION: r"\bfn\b",
+    TokenType.IF: r"\bif\b",
+    TokenType.ELSE: r"\belse\b",
+    TokenType.RETURN: r"\breturn\b",
+    TokenType.TRUE: r"\btrue\b",
+    TokenType.FALSE: r"\bfalse\b",
+    TokenType.IDENTIFIER: r"[a-zA-Z_][a-zA-Z0-9_]*",
+    TokenType.INTEGER: r"\d+",
+    TokenType.STRING: r'"[^"]*"',
+    TokenType.NOT_EQUAL: r"!=",
+    TokenType.BANG: r"!",
+    TokenType.EQUAL: r"==",
+    TokenType.ASSIGN: r"=",
+    TokenType.PLUS: r"\+",
+    TokenType.MINUS: r"-",
+    TokenType.ASTERISK: r"\*",
+    TokenType.SLASH: r"/",
+    TokenType.LESSER_THAN: r"<",
+    TokenType.GREATER_THAN: r">",
+    TokenType.LEFT_PAREN: r"\(",
+    TokenType.RIGHT_PAREN: r"\)",
+    TokenType.LEFT_BRACE: r"\{",
+    TokenType.RIGHT_BRACE: r"\}",
+    TokenType.COMMA: r",",
+    TokenType.SEMICOLON: r";",
 }
 
 
-@final
-class Lexer:
-    """
-    The lexer (a.k.a. "tokenizer").
+def lex(code: str) -> Generator[Token]:
+    cursor = 0
 
-    A `Lexer` is an iterator. Once a `Lexer` is constructed, `next(lexer)` may be called
-    to retrieve the next token. No errors are raised.
-    """
+    while cursor < len(code):
+        current_char = code[cursor]
 
-    def __init__(self, code: str) -> None:
-        self._code = code
-        self._pos = -1
-        self._current_char = ""
-        self._next_char = ""
-        self._advance()
+        # Skip whitespace
+        if current_char.isspace():
+            cursor += 1
+            continue
 
-    def __iter__(self) -> Lexer:
-        return self
+        token = None
 
-    def __next__(self) -> Token:
-        self._eat_whitespace()
+        for token_type, pattern in PATTERNS.items():
+            regex = re.compile(pattern)
+            match = regex.match(code, cursor)
+            if match:
+                literal = match.group()
 
-        token = Token(TokenType.ILLEGAL, "")
+                # Remove quotes around strings
+                if token_type == TokenType.STRING:
+                    literal = literal[1:-1]
 
-        match self._current_char:
-            case "=" if self._next_char == "=":
-                self._advance()
-                self._advance()
-                token = Token(TokenType.EQUAL, "==")
+                token = Token(token_type, literal)
+                cursor = match.end()
+                break
 
-            case "!" if self._next_char == "=":
-                self._advance()
-                self._advance()
-                token = Token(TokenType.NOT_EQUAL, "!=")
+        # If none of the patterns matched, this character is unsupported/illegal
+        if token is None:
+            msg = f"Illegal character: {current_char}"
+            raise SyntaxError(msg)
 
-            case '"':
-                token = Token(TokenType.STRING, self._eat_string())
+        yield token
 
-            case _ if self._current_char in _SINGLE_CHAR_TOKEN_TYPE_MAP:
-                token = Token(
-                    type=_SINGLE_CHAR_TOKEN_TYPE_MAP[self._current_char],
-                    literal=self._current_char,
-                )
-
-            case _ if self._current_char.isalpha():
-                literal = self._eat_ident()
-                type_ = lookup_ident(literal)
-                token = Token(type_, literal)
-
-            case _ if self._current_char.isdigit():
-                token = Token(TokenType.INTEGER, self._eat_int())
-
-            case "":
-                return Token(TokenType.END_OF_FILE, "")
-
-            case _:
-                token = Token(TokenType.ILLEGAL, self._current_char)
-
-        self._advance()
-        return token
-
-    def _eat_whitespace(self) -> None:
-        while self._current_char.isspace():
-            self._advance()
-
-    def _eat_ident(self) -> str:
-        orig_pos = self._pos
-        while self._next_char.isalnum():
-            self._advance()
-        return self._code[orig_pos : self._pos + 1]
-
-    def _eat_int(self) -> str:
-        orig_pos = self._pos
-        while self._next_char.isdigit():
-            self._advance()
-        return self._code[orig_pos : self._pos + 1]
-
-    def _eat_string(self) -> str:
-        self._advance()
-
-        if self._current_char == '"':
-            return ""
-
-        orig_pos = self._pos
-        while self._next_char not in ('"', ""):
-            self._advance()
-        self._advance()
-        return self._code[orig_pos : self._pos]
-
-    def _advance(self) -> None:
-        """
-        Advance the cursor.
-
-        If the cursor would be out of bounds, `self._current_char` or `self._next_char`
-        may be an empty string (`""`).
-        """
-
-        self._pos += 1
-
-        if self._pos >= len(self._code):
-            self._current_char = ""
-            self._next_char = ""
-            return
-
-        self._current_char = self._code[self._pos]
-        self._next_char = self._code[self._pos + 1] if self._pos + 1 < len(self._code) else ""
+    while True:
+        yield Token(TokenType.END_OF_FILE, "")

@@ -16,12 +16,12 @@ from monk.ast import (
     ReturnStatement,
     StringLiteral,
 )
-from monk.lexer import Lexer
+from monk.lexer import lex
 from monk.parser import Parser
 
 
 def parse_program(code: str) -> Program:
-    lexer = Lexer(code)
+    lexer = lex(code)
     parser = Parser(lexer)
     return parser.parse_program()
 
@@ -251,7 +251,7 @@ def assert_int_literal(expr: Expression, value: int) -> None:
 
 
 def test_errors() -> None:
-    lexer = Lexer("let = 5;")
+    lexer = lex("let = 5;")
     parser = Parser(lexer)
 
     with pytest.raises(SyntaxError):
