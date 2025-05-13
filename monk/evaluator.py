@@ -46,15 +46,27 @@ def builtin_len(*args: Object) -> Object:
     return Integer(len(args[0].value))
 
 
-def puts(*args: Object) -> Object:
+def builtin_puts(*args: Object) -> Object:
     for arg in args:
         print(arg)
     return NULL
 
 
+def builtin_input(*args: Object) -> Object:
+    prompt = ""
+    if len(args) == 1:
+        if not isinstance(args[0], String):
+            msg = f"Input prompt should be a string, got {args[0].type}"
+            raise TypeError(msg)
+        prompt = args[0].value
+
+    return String(input(prompt))
+
+
 builtins: dict[str, Builtin] = {
     "len": Builtin(builtin_len),
-    "puts": Builtin(puts),
+    "puts": Builtin(builtin_puts),
+    "input": Builtin(builtin_input),
 }
 
 
