@@ -125,7 +125,7 @@ def evaluate(node: Node, env: Environment) -> Object:  # noqa: PLR0911, PLR0912,
 
             match function:
                 case Builtin():
-                    return function.fn(*args)
+                    return function.function(*args)
 
                 case Function():
                     scope_env = Environment(outer=function.environment)

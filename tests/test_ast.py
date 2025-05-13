@@ -1,12 +1,12 @@
 from monk.ast import Identifier, LetStatement, Program
-from monk.token import Token, TokenKind
+from monk.token import Token, TokenType
 
 
 def test_str() -> None:
     let = LetStatement(
-        Token(TokenKind.LET, "let"),
-        Identifier(Token(TokenKind.IDENT, "myVar"), "myVar"),
-        Identifier(Token(TokenKind.IDENT, "anotherVar"), "anotherVar"),
+        Token(TokenType.LET, "let"),
+        Identifier(Token(TokenType.IDENTIFIER, "myVar"), "myVar"),
+        Identifier(Token(TokenType.IDENTIFIER, "anotherVar"), "anotherVar"),
     )
     program = Program([let])
 

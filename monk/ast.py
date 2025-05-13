@@ -1,9 +1,13 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import override
+from typing import TYPE_CHECKING, override
 
-from monk.token import Token
 from monk.utils import join_commas
+
+if TYPE_CHECKING:
+    from monk.token import Token
 
 
 class Node(ABC):
@@ -15,10 +19,12 @@ class Node(ABC):
     def __str__(self) -> str: ...
 
 
-class Statement(Node, ABC): ...
+class Statement(Node, ABC):
+    """A node that does not produce any value."""
 
 
-class Expression(Node, ABC): ...
+class Expression(Node, ABC):
+    """A node that produces a value."""
 
 
 @dataclass(frozen=True)
@@ -32,20 +38,6 @@ class Program(Node):
     @override
     def __str__(self) -> str:
         return "\n".join(str(s) for s in self.statements)
-
-
-@dataclass(frozen=True)
-class Identifier(Expression):
-    token: Token
-    value: str
-
-    @override
-    def token_literal(self) -> str:
-        return self.token.literal
-
-    @override
-    def __str__(self) -> str:
-        return self.value
 
 
 @dataclass(frozen=True)
@@ -92,9 +84,51 @@ class ExpressionStatement(Statement):
 
 
 @dataclass(frozen=True)
+class BlockStatement(Statement):
+    token: Token
+    statements: list[Statement]
+
+    @override
+    def token_literal(self) -> str:
+        return self.token.literal
+
+    @override
+    def __str__(self) -> str:
+        return f"{{\n    {'\n    '.join(str(s) for s in self.statements)}\n}}"
+
+
+@dataclass(frozen=True)
+class Identifier(Expression):
+    token: Token
+    value: str
+
+    @override
+    def token_literal(self) -> str:
+        return self.token.literal
+
+    @override
+    def __str__(self) -> str:
+        return self.value
+
+
+@dataclass(frozen=True)
 class IntegerLiteral(Expression):
     token: Token
     value: int
+
+    @override
+    def token_literal(self) -> str:
+        return self.token.literal
+
+    @override
+    def __str__(self) -> str:
+        return self.token.literal
+
+
+@dataclass(frozen=True)
+class BooleanLiteral(Expression):
+    token: Token
+    value: bool
 
     @override
     def token_literal(self) -> str:
@@ -117,6 +151,21 @@ class StringLiteral(Expression):
     @override
     def __str__(self) -> str:
         return f'"{self.value}"'
+
+
+@dataclass(frozen=True)
+class FunctionLiteral(Expression):
+    token: Token
+    parameters: list[Identifier]
+    body: BlockStatement
+
+    @override
+    def token_literal(self) -> str:
+        return self.token.literal
+
+    @override
+    def __str__(self) -> str:
+        return f"{self.token_literal}({join_commas(self.parameters)}) {self.body}"
 
 
 @dataclass(frozen=True)
@@ -151,34 +200,6 @@ class InfixExpression(Expression):
 
 
 @dataclass(frozen=True)
-class BooleanLiteral(Expression):
-    token: Token
-    value: bool
-
-    @override
-    def token_literal(self) -> str:
-        return self.token.literal
-
-    @override
-    def __str__(self) -> str:
-        return self.token.literal
-
-
-@dataclass(frozen=True)
-class BlockStatement(Statement):
-    token: Token
-    statements: list[Statement]
-
-    @override
-    def token_literal(self) -> str:
-        return self.token.literal
-
-    @override
-    def __str__(self) -> str:
-        return f"{{\n    {'\n    '.join(str(s) for s in self.statements)}\n}}"
-
-
-@dataclass(frozen=True)
 class IfExpression(Expression):
     token: Token
     condition: Expression
@@ -197,21 +218,6 @@ class IfExpression(Expression):
             s += f" else {self.alternative}"
 
         return s
-
-
-@dataclass(frozen=True)
-class FunctionLiteral(Expression):
-    token: Token
-    parameters: list[Identifier]
-    body: BlockStatement
-
-    @override
-    def token_literal(self) -> str:
-        return self.token.literal
-
-    @override
-    def __str__(self) -> str:
-        return f"{self.token_literal}({join_commas(self.parameters)}) {self.body}"
 
 
 @dataclass(frozen=True)

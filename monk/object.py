@@ -125,7 +125,7 @@ class BuiltinFunction(Protocol):
 
 @dataclass(frozen=True)
 class Builtin(Object):
-    fn: BuiltinFunction
+    function: BuiltinFunction
 
     @property
     @override
@@ -139,15 +139,27 @@ class Builtin(Object):
 
 @final
 class Environment:
+    """Storage for variables, a.k.a. "scope"."""
+
     def __init__(self, outer: Environment | None = None) -> None:
+        """
+        Initialize an environment.
+
+        If an outer environment (`outer`) is specified, this environment will
+        "inherit" from it, i.e., `environment[name]` will first try to resolve
+        the object from its own map, then `outer[name]` if the object was not found.
+        """
+
         self._outer = outer
         self._map: dict[str, Object] = {}
 
     def __getitem__(self, name: str) -> Object:
         if name in self._map:
             return self._map[name]
+
         if self._outer is not None:
             return self._outer[name]
+
         msg = f"Unknown identifier {name}"
         raise KeyError(msg)
 

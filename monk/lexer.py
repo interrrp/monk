@@ -2,28 +2,35 @@ from __future__ import annotations
 
 from typing import final
 
-from monk.token import Token, TokenKind, lookup_ident
+from monk.token import Token, TokenType, lookup_ident
 
-_SINGLE_CHAR_TOKEN_KIND_MAP = {
-    "=": TokenKind.ASSIGN,
-    "+": TokenKind.PLUS,
-    "-": TokenKind.MINUS,
-    "*": TokenKind.ASTERISK,
-    "/": TokenKind.SLASH,
-    "(": TokenKind.LPAREN,
-    ")": TokenKind.RPAREN,
-    "{": TokenKind.LBRACE,
-    "}": TokenKind.RBRACE,
-    ";": TokenKind.SEMICOLON,
-    ",": TokenKind.COMMA,
-    "<": TokenKind.LT,
-    ">": TokenKind.GT,
-    "!": TokenKind.BANG,
+_SINGLE_CHAR_TOKEN_TYPE_MAP = {
+    "=": TokenType.ASSIGN,
+    "+": TokenType.PLUS,
+    "-": TokenType.MINUS,
+    "*": TokenType.ASTERISK,
+    "/": TokenType.SLASH,
+    "(": TokenType.LEFT_PAREN,
+    ")": TokenType.RIGHT_PAREN,
+    "{": TokenType.LEFT_BRACE,
+    "}": TokenType.RIGHT_BRACE,
+    ";": TokenType.SEMICOLON,
+    ",": TokenType.COMMA,
+    "<": TokenType.LESSER_THAN,
+    ">": TokenType.GREATER_THAN,
+    "!": TokenType.BANG,
 }
 
 
 @final
 class Lexer:
+    """
+    The lexer (a.k.a. "tokenizer").
+
+    A `Lexer` is an iterator. Once a `Lexer` is constructed, `next(lexer)` may be called
+    to retrieve the next token. No errors are raised.
+    """
+
     def __init__(self, code: str) -> None:
         self._code = code
         self._pos = -1
@@ -37,41 +44,41 @@ class Lexer:
     def __next__(self) -> Token:
         self._eat_whitespace()
 
-        token = Token(TokenKind.ILLEGAL, "")
+        token = Token(TokenType.ILLEGAL, "")
 
         match self._current_char:
             case "=" if self._next_char == "=":
                 self._advance()
                 self._advance()
-                token = Token(TokenKind.EQ, "==")
+                token = Token(TokenType.EQUAL, "==")
 
             case "!" if self._next_char == "=":
                 self._advance()
                 self._advance()
-                token = Token(TokenKind.NOT_EQ, "!=")
+                token = Token(TokenType.NOT_EQUAL, "!=")
 
             case '"':
-                token = Token(TokenKind.STRING, self._eat_string())
+                token = Token(TokenType.STRING, self._eat_string())
 
-            case _ if self._current_char in _SINGLE_CHAR_TOKEN_KIND_MAP:
+            case _ if self._current_char in _SINGLE_CHAR_TOKEN_TYPE_MAP:
                 token = Token(
-                    kind=_SINGLE_CHAR_TOKEN_KIND_MAP[self._current_char],
+                    type=_SINGLE_CHAR_TOKEN_TYPE_MAP[self._current_char],
                     literal=self._current_char,
                 )
 
             case _ if self._current_char.isalpha():
                 literal = self._eat_ident()
-                kind = lookup_ident(literal)
-                token = Token(kind, literal)
+                type_ = lookup_ident(literal)
+                token = Token(type_, literal)
 
             case _ if self._current_char.isdigit():
-                token = Token(TokenKind.INT, self._eat_int())
+                token = Token(TokenType.INTEGER, self._eat_int())
 
             case "":
-                return Token(TokenKind.EOF, "")
+                return Token(TokenType.END_OF_FILE, "")
 
             case _:
-                token = Token(TokenKind.ILLEGAL, self._current_char)
+                token = Token(TokenType.ILLEGAL, self._current_char)
 
         self._advance()
         return token
@@ -105,6 +112,13 @@ class Lexer:
         return self._code[orig_pos : self._pos]
 
     def _advance(self) -> None:
+        """
+        Advance the cursor.
+
+        If the cursor would be out of bounds, `self._current_char` or `self._next_char`
+        may be an empty string (`""`).
+        """
+
         self._pos += 1
 
         if self._pos >= len(self._code):

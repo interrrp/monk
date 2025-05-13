@@ -2,12 +2,12 @@ from dataclasses import dataclass
 from enum import Enum
 
 
-class TokenKind(Enum):
+class TokenType(Enum):
     ILLEGAL = "ILLEGAL"
-    EOF = "EOF"
+    END_OF_FILE = "END_OF_FILE"
 
-    IDENT = "IDENT"
-    INT = "INT"
+    IDENTIFIER = "IDENTIFIER"
+    INTEGER = "INTEGER"
     STRING = "STRING"
 
     ASSIGN = "="
@@ -20,16 +20,16 @@ class TokenKind(Enum):
     COMMA = ","
     SEMICOLON = ";"
 
-    LPAREN = "("
-    RPAREN = ")"
-    LBRACE = "{"
-    RBRACE = "}"
+    LEFT_PAREN = "("
+    RIGHT_PAREN = ")"
+    LEFT_BRACE = "{"
+    RIGHT_BRACE = "}"
 
-    LT = "<"
-    GT = ">"
+    LESSER_THAN = "<"
+    GREATER_THAN = ">"
 
-    EQ = "=="
-    NOT_EQ = "!="
+    EQUAL = "=="
+    NOT_EQUAL = "!="
 
     TRUE = "true"
     FALSE = "false"
@@ -42,17 +42,17 @@ class TokenKind(Enum):
 
 @dataclass
 class Token:
-    kind: TokenKind
+    type: TokenType
     literal: str
 
 
-def lookup_ident(ident: str) -> TokenKind:
+def lookup_ident(ident: str) -> TokenType:
     return {
-        "fn": TokenKind.FUNCTION,
-        "let": TokenKind.LET,
-        "true": TokenKind.TRUE,
-        "false": TokenKind.FALSE,
-        "if": TokenKind.IF,
-        "else": TokenKind.ELSE,
-        "return": TokenKind.RETURN,
-    }.get(ident, TokenKind.IDENT)
+        "fn": TokenType.FUNCTION,
+        "let": TokenType.LET,
+        "true": TokenType.TRUE,
+        "false": TokenType.FALSE,
+        "if": TokenType.IF,
+        "else": TokenType.ELSE,
+        "return": TokenType.RETURN,
+    }.get(ident, TokenType.IDENTIFIER)
