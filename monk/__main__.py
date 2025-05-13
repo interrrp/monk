@@ -12,7 +12,7 @@ def run(code: str, env: Environment) -> None:
     parser = Parser(lexer)
     program = parser.parse_program()
     result = evaluate(program, env)
-    print(result)  # noqa: T201
+    print(result)
 
 
 if __name__ == "__main__":

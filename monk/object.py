@@ -116,7 +116,7 @@ class String(Object):
 
     @override
     def __str__(self) -> str:
-        return f'"{self.value}"'
+        return self.value
 
 
 class BuiltinFunction(Protocol):

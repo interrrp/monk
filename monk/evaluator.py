@@ -37,7 +37,7 @@ FALSE = Boolean(value=False)
 def builtin_len(*args: Object) -> Object:
     if len(args) != 1:
         msg = f"len takes 1 argument, got {len(args)}"
-        raise RuntimeError(msg)
+        raise TypeError(msg)
 
     if not isinstance(args[0], String):
         msg = f"len takes a string, got {args[0].type}"
@@ -46,8 +46,15 @@ def builtin_len(*args: Object) -> Object:
     return Integer(len(args[0].value))
 
 
+def puts(*args: Object) -> Object:
+    for arg in args:
+        print(arg)
+    return NULL
+
+
 builtins: dict[str, Builtin] = {
     "len": Builtin(builtin_len),
+    "puts": Builtin(puts),
 }
 
 
