@@ -25,6 +25,8 @@ def test_next_token() -> None:
         10 == 10;
         10 != 9;
 
+        [1, 2, 3]
+
         "foobar"
         " foo bar "
         ""
@@ -118,6 +120,14 @@ def test_next_token() -> None:
         Token(TokenType.NOT_EQUAL, "!="),
         Token(TokenType.INTEGER, "9"),
         Token(TokenType.SEMICOLON, ";"),
+        ##
+        Token(TokenType.LEFT_BRACKET, "["),
+        Token(TokenType.INTEGER, "1"),
+        Token(TokenType.COMMA, ","),
+        Token(TokenType.INTEGER, "2"),
+        Token(TokenType.COMMA, ","),
+        Token(TokenType.INTEGER, "3"),
+        Token(TokenType.RIGHT_BRACKET, "]"),
         ##
         Token(TokenType.STRING, "foobar"),
         Token(TokenType.STRING, " foo bar "),

@@ -33,6 +33,8 @@ PATTERNS = {
     TokenType.RIGHT_PAREN: r"\)",
     TokenType.LEFT_BRACE: r"\{",
     TokenType.RIGHT_BRACE: r"\}",
+    TokenType.LEFT_BRACKET: r"\[",
+    TokenType.RIGHT_BRACKET: r"\]",
     TokenType.COMMA: r",",
     TokenType.SEMICOLON: r";",
 }

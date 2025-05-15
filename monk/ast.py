@@ -154,6 +154,20 @@ class StringLiteral(Expression):
 
 
 @dataclass(frozen=True)
+class ArrayLiteral(Expression):
+    token: Token
+    values: list[Expression]
+
+    @override
+    def token_literal(self) -> str:
+        return self.token.literal
+
+    @override
+    def __str__(self) -> str:
+        return f"[{join_commas([str(v) for v in self.values])}]"
+
+
+@dataclass(frozen=True)
 class FunctionLiteral(Expression):
     token: Token
     parameters: list[Identifier]

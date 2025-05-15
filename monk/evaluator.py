@@ -1,4 +1,5 @@
 from monk.ast import (
+    ArrayLiteral,
     BlockStatement,
     BooleanLiteral,
     CallExpression,
@@ -18,6 +19,7 @@ from monk.ast import (
     StringLiteral,
 )
 from monk.object import (
+    Array,
     Boolean,
     Builtin,
     Environment,
@@ -39,11 +41,14 @@ def builtin_len(*args: Object) -> Object:
         msg = f"len takes 1 argument, got {len(args)}"
         raise TypeError(msg)
 
-    if not isinstance(args[0], String):
-        msg = f"len takes a string, got {args[0].type}"
+    if not isinstance(args[0], String | Array):
+        msg = f"len takes a string or an array, got {args[0].type}"
         raise TypeError(msg)
 
-    return Integer(len(args[0].value))
+    if isinstance(args[0], String):
+        return Integer(len(args[0].value))
+
+    return Integer(len(args[0].values))
 
 
 def builtin_puts(*args: Object) -> Object:
@@ -63,10 +68,71 @@ def builtin_input(*args: Object) -> Object:
     return String(input(prompt))
 
 
+def builtin_first(*args: Object) -> Object:
+    if len(args) != 1:
+        msg = f"first takes 1 argument, got {len(args)}"
+        raise TypeError(msg)
+
+    array = args[0]
+    if not isinstance(array, Array):
+        msg = f"first takes an array, got {array.type}"
+        raise TypeError(msg)
+
+    return array.values[0]
+
+
+def builtin_last(*args: Object) -> Object:
+    if len(args) != 1:
+        msg = f"last takes 1 argument, got {len(args)}"
+        raise TypeError(msg)
+
+    array = args[0]
+    if not isinstance(array, Array):
+        msg = f"last takes an array, got {array.type}"
+        raise TypeError(msg)
+
+    return array.values[-1]
+
+
+def builtin_rest(*args: Object) -> Object:
+    if len(args) != 1:
+        msg = f"rest takes 1 argument, got {len(args)}"
+        raise TypeError(msg)
+
+    array = args[0]
+    if not isinstance(array, Array):
+        msg = f"rest takes an array, got {array.type}"
+        raise TypeError(msg)
+
+    return Array(array.values[1:])
+
+
+def builtin_push(*args: Object) -> Object:
+    num_args = 2
+
+    if len(args) != num_args:
+        msg = f"push takes {num_args} arguments, got {len(args)}"
+        raise TypeError(msg)
+
+    array = args[0]
+    if not isinstance(array, Array):
+        msg = f"First argument to push takes an array, got {array.type}"
+        raise TypeError(msg)
+
+    obj = args[1]
+    array.values.append(obj)
+
+    return NULL
+
+
 builtins: dict[str, Builtin] = {
     "len": Builtin(builtin_len),
     "puts": Builtin(builtin_puts),
     "input": Builtin(builtin_input),
+    "first": Builtin(builtin_first),
+    "last": Builtin(builtin_last),
+    "rest": Builtin(builtin_rest),
+    "push": Builtin(builtin_push),
 }
 
 
@@ -86,6 +152,9 @@ def evaluate(node: Node, env: Environment) -> Object:  # noqa: PLR0911, PLR0912,
 
         case StringLiteral():
             return String(node.value)
+
+        case ArrayLiteral():
+            return Array([evaluate(value, env) for value in node.values])
 
         case Identifier():
             if v := env.get(node.value):

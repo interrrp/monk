@@ -4,7 +4,7 @@ import pytest
 
 from monk.evaluator import NULL, evaluate
 from monk.lexer import lex
-from monk.object import Boolean, Environment, Function, Integer, Object, String
+from monk.object import Array, Boolean, Environment, Function, Integer, Object, String
 from monk.parser import Parser
 
 
@@ -242,7 +242,7 @@ def test_string_concatenation() -> None:
         ('len("")', 0),
         ('len("four")', 4),
         ('len("hello world")', 11),
-        ("len(1)", "len takes a string, got INTEGER"),
+        ("len(1)", "len takes a string or an array, got INTEGER"),
         ('len("one", "two")', "len takes 1 argument, got 2"),
     ],
 )
@@ -253,6 +253,34 @@ def test_builtin_functions(code: str, expected_val: int | str) -> None:
     else:
         result = do_eval(code)
         assert_integer_obj(result, expected_val)
+
+
+@pytest.mark.parametrize(
+    ("code", "expected_vals"),
+    [
+        ("[1, 2, 3]", [1, 2, 3]),
+        ("[]", []),
+        ("[1]", [1]),
+    ],
+)
+def test_arrays(code: str, expected_vals: list[int]) -> None:
+    result = do_eval(code)
+    assert isinstance(result, Array)
+    assert len(result.values) == len(expected_vals)
+    for i, val in enumerate(result.values):
+        assert_integer_obj(val, expected_vals[i])
+
+
+@pytest.mark.parametrize(
+    ("code", "expected_val"),
+    [
+        ("[1, 2, 3][0]", 1),
+        ("[1, 2, 3][2]", 3),
+    ],
+)
+def test_indexes(code: str, expected_val: int) -> None:
+    result = do_eval(code)
+    assert_integer_obj(result, expected_val)
 
 
 def assert_integer_obj(obj: Object, val: int) -> None:

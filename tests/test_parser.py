@@ -1,6 +1,7 @@
 import pytest
 
 from monk.ast import (
+    ArrayLiteral,
     BooleanLiteral,
     CallExpression,
     Expression,
@@ -229,6 +230,21 @@ def test_strings() -> None:
     string = statement.expression
     assert isinstance(string, StringLiteral)
     assert string.value == "hello world"
+
+
+def test_arrays() -> None:
+    program = parse_program("[1, 2, 3]")
+    num_values = 3
+
+    statement = program.statements[0]
+    assert isinstance(statement, ExpressionStatement)
+
+    arr = statement.expression
+    assert isinstance(arr, ArrayLiteral)
+    assert len(arr.values) == num_values
+    assert_int_literal(arr.values[0], 1)
+    assert_int_literal(arr.values[1], 2)
+    assert_int_literal(arr.values[2], 3)
 
 
 def assert_identifier(expr: Expression, value: str) -> None:

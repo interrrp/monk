@@ -18,6 +18,7 @@ class ObjectType(Enum):
     RETURN_VALUE = "RETURN_VALUE"
     FUNCTION = "FUNCTION"
     STRING = "STRING"
+    ARRAY = "ARRAY"
     BUILTIN = "BUILTIN"
 
     @override
@@ -117,6 +118,20 @@ class String(Object):
     @override
     def __str__(self) -> str:
         return self.value
+
+
+@dataclass(frozen=True)
+class Array(Object):
+    values: list[Object]
+
+    @property
+    @override
+    def type(self) -> ObjectType:
+        return ObjectType.ARRAY
+
+    @override
+    def __str__(self) -> str:
+        return f"[{join_commas([str(v) for v in self.values])}]"
 
 
 class BuiltinFunction(Protocol):

@@ -5,6 +5,7 @@ from enum import IntEnum
 from typing import final
 
 from monk.ast import (
+    ArrayLiteral,
     BlockStatement,
     BooleanLiteral,
     CallExpression,
@@ -116,12 +117,13 @@ class Parser:
         self._prefix_parse_fns: dict[TokenType, PrefixParseFn] = {
             TokenType.IDENTIFIER: self._parse_identifier,
             TokenType.INTEGER: self._parse_integer_literal,
+            TokenType.TRUE: self._parse_boolean,
+            TokenType.FALSE: self._parse_boolean,
             TokenType.STRING: self._parse_string_literal,
+            TokenType.LEFT_BRACKET: self._parse_array_literal,
             TokenType.FUNCTION: self._parse_function_literal,
             TokenType.BANG: self._parse_prefix_expression,
             TokenType.MINUS: self._parse_prefix_expression,
-            TokenType.TRUE: self._parse_boolean,
-            TokenType.FALSE: self._parse_boolean,
             TokenType.LEFT_PAREN: self._parse_grouped_expression,
             TokenType.IF: self._parse_if_expression,
         }
@@ -325,7 +327,7 @@ class Parser:
     def _parse_call_arguments(self) -> list[Expression]:
         args: list[Expression] = []
 
-        if self._tokens.next.type == TokenType.RIGHT_PAREN:
+        if self._tokens.next_is(TokenType.RIGHT_PAREN):
             self._tokens.advance()
             return args
 
@@ -333,7 +335,7 @@ class Parser:
 
         args.append(self._parse_expression())
 
-        while self._tokens.next.type == TokenType.COMMA:
+        while self._tokens.next_is(TokenType.COMMA):
             self._tokens.advance()
             self._tokens.advance()
             args.append(self._parse_expression())
@@ -341,6 +343,24 @@ class Parser:
         self._tokens.expect_next(TokenType.RIGHT_PAREN)
 
         return args
+
+    def _parse_array_literal(self) -> ArrayLiteral:
+        token = self._tokens.current
+        self._tokens.advance()  # Skip opening bracket
+
+        if self._tokens.current_is(TokenType.RIGHT_BRACKET):
+            return ArrayLiteral(token, [])
+
+        values: list[Expression] = [self._parse_expression()]
+
+        while self._tokens.next_is(TokenType.COMMA):
+            self._tokens.advance()
+            self._tokens.advance()
+            values.append(self._parse_expression())
+
+        self._tokens.expect_next(TokenType.RIGHT_BRACKET)
+
+        return ArrayLiteral(token, values)
 
     def _parse_identifier(self) -> Identifier:
         return Identifier(self._tokens.current, self._tokens.current.literal)
