@@ -122,7 +122,7 @@ def builtin_push(*args: Object) -> Object:
     obj = args[1]
     array.values.append(obj)
 
-    return NULL
+    return array
 
 
 builtins: dict[str, Builtin] = {
@@ -197,7 +197,7 @@ def evaluate(node: Node, env: Environment) -> Object:  # noqa: PLR0911, PLR0912,
                     return function.function(*args)
 
                 case Function():
-                    scope_env = Environment(outer=function.environment)
+                    scope_env = Environment(function.environment)
                     for i, param in enumerate(function.parameters):
                         scope_env[param.value] = args[i]
 
